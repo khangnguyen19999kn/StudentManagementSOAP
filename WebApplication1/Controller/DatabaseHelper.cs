@@ -15,6 +15,13 @@ public class DatabaseHelper
     {
         _connectionString = connectionString;
     }
+    private bool IsIdExists(MySqlConnection connection, int id)
+    {
+        string query = "SELECT COUNT(*) FROM student WHERE id = @id";
+        var parameters = new { id };
+        int count = connection.ExecuteScalar<int>(query, parameters);
+        return count > 0;
+    }
 
     public string GetAllStudents()
     {
@@ -34,19 +41,31 @@ public class DatabaseHelper
         using (MySqlConnection connection = new MySqlConnection(_connectionString))
         {
             connection.Open();
-            string query = "INSERT INTO student (id,name, dateBirth, email, gpa, password) " +
-                             "VALUES (@id, @name, @dateBirth, @email, @gpa, @password);";
+            string query = "INSERT INTO student (id, name, dateBirth, email, gpa, password) " +
+                           "VALUES (@id, @name, @dateBirth, @email, @gpa, @password);";
+
+            // Khởi tạo một số ngẫu nhiên cho id
+            Random random = new Random();
+            int id = random.Next(1, 1000000); // Thay đổi khoảng số ngẫu nhiên theo yêu cầu
+
+            // Kiểm tra xem id đã tồn tại chưa
+            while (IsIdExists(connection, id))
+            {
+                id = random.Next(1, 1000000); // Thử lại nếu id đã tồn tại
+            }
+
             var parameters = new
             {
-                id = student.Id,
+                id,
                 name = student.name,
                 dateBirth = student.dateBirth,
                 email = student.email,
                 gpa = student.gpa,
                 password = student.password
             };
+
             connection.Execute(query, parameters);
-            // Thực hiện truy vấn INSERT
+
             string json = JsonConvert.SerializeObject(student);
             return json;
 
@@ -57,7 +76,7 @@ public class DatabaseHelper
         using (MySqlConnection connection = new MySqlConnection(_connectionString))
         {
             connection.Open();
-            string query = "UPDATE student SET name = @name, dateBirth = @dateBirth, email = @email, gpa = @gpa, password = @password WHERE id = @id;";
+            string query = "UPDATE student SET name = @name, dateBirth = @dateBirth, email = @email, gpa = @gpa, password=@password WHERE id = @id;";
             var parameters = new
             {
                 id = student.Id,
@@ -65,7 +84,8 @@ public class DatabaseHelper
                 dateBirth = student.dateBirth,
                 email = student.email,
                 gpa = student.gpa,
-                password = student.password
+                password= student.password,
+               
             };
 
             // Thực hiện truy vấn UPDATE
