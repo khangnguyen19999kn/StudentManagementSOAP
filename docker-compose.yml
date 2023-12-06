@@ -1,0 +1,21 @@
+version: '3.9'
+
+services:
+  webapplication1:
+    build:
+      context: .\WebApplication1
+      dockerfile: Dockerfile
+    ports: 
+    - "5255:5255"
+
+  db:
+    image: mysql:latest
+    container_name: mysql-container
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: Kn200499
+      MYSQL_DATABASE: studentmanagement
+    ports:
+      - "3306:3306"
+
+    

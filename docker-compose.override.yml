@@ -1,0 +1,6 @@
+version: '3.4'
+
+services:
+  webapplication1:
+    ports:
+      - "80"
