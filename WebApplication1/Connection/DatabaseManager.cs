@@ -15,4 +15,13 @@ public class DatabaseManager
 
         return _connection;
     }
+
+    public static void CloseConnection()
+    {
+        if (_connection != null)
+        {
+            _connection.Close();
+            _connection = null;
+        }
+    }
 }

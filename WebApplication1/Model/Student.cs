@@ -13,7 +13,7 @@ namespace WebApplication1.Connection
         public string email { get; set; }
         public float gpa { get; set; }
         public string password { get; set; }
-        // Các thuộc tính khác của sinh viên
+        public string gender { get; set; }
 
         public Student()
         {

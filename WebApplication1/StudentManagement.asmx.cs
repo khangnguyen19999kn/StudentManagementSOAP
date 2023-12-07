@@ -4,14 +4,10 @@ using WebApplication1.Connection;
 
 namespace WebApplication1
 {
-    /// <summary>
-    /// Summary description for StudentManagement
-    /// </summary>
+  
     [WebService(Namespace = "http://tempuri.org/")]
     [WebServiceBinding(ConformsTo = WsiProfiles.BasicProfile1_1)]
     [System.ComponentModel.ToolboxItem(false)]
-    // To allow this Web Service to be called from script, using ASP.NET AJAX, uncomment the following line. 
-    // [System.Web.Script.Services.ScriptService]
     public class StudentManagement : System.Web.Services.WebService
     {
 
@@ -37,9 +33,9 @@ namespace WebApplication1
         private List<Student> students = new List<Student>();
 
         [WebMethod]
-        public string GetStudent(int studentId)
+        public string GetStudent(string studentName)
         {
-            return _dbHelper.GetStudent(studentId);
+            return _dbHelper.GetStudent(studentName);
         }
 
 
@@ -55,9 +51,17 @@ namespace WebApplication1
         {
             return _dbHelper.DeleteStudent(studentId);
         }
+        [WebMethod]
+        public string GetGenderCount()
+        {
+            return _dbHelper.GetGenderCounts();
+        }
 
+        [WebMethod]
+        public string GetStudentStatistics()
+        {
+            return _dbHelper.GetStudentStatistics();
+        }
 
-
-    
     }
 }

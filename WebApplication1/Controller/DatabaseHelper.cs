@@ -5,7 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using WebApplication1.Connection;
-
+using WebApplication1.Model;
 
 public class DatabaseHelper
 {
@@ -31,7 +31,6 @@ public class DatabaseHelper
             string query = "SELECT * FROM student";
             List<Student> students = connection.Query<Student>(query).ToList();
 
-            // Chuyển đổi danh sách sinh viên sang định dạng JSON
             string jsonResult = JsonConvert.SerializeObject(students);
             return jsonResult;
         }
@@ -41,17 +40,15 @@ public class DatabaseHelper
         using (MySqlConnection connection = new MySqlConnection(_connectionString))
         {
             connection.Open();
-            string query = "INSERT INTO student (id, name, dateBirth, email, gpa, password) " +
-                           "VALUES (@id, @name, @dateBirth, @email, @gpa, @password);";
+            string query = "INSERT INTO student (id, name, dateBirth, email, gpa, password, gender)" +
+                           "VALUES (@id, @name, @dateBirth, @email, @gpa, @password, @gender);";
 
-            // Khởi tạo một số ngẫu nhiên cho id
             Random random = new Random();
-            int id = random.Next(1, 1000000); // Thay đổi khoảng số ngẫu nhiên theo yêu cầu
+            int id = random.Next(1, 1000000);
 
-            // Kiểm tra xem id đã tồn tại chưa
             while (IsIdExists(connection, id))
             {
-                id = random.Next(1, 1000000); // Thử lại nếu id đã tồn tại
+                id = random.Next(1, 1000000); 
             }
 
             var parameters = new
@@ -61,7 +58,8 @@ public class DatabaseHelper
                 dateBirth = student.dateBirth,
                 email = student.email,
                 gpa = student.gpa,
-                password = student.password
+                password = student.password,
+                gender = student.gender
             };
 
             connection.Execute(query, parameters);
@@ -76,7 +74,7 @@ public class DatabaseHelper
         using (MySqlConnection connection = new MySqlConnection(_connectionString))
         {
             connection.Open();
-            string query = "UPDATE student SET name = @name, dateBirth = @dateBirth, email = @email, gpa = @gpa, password=@password WHERE id = @id;";
+            string query = "UPDATE student SET name = @name, dateBirth = @dateBirth, email = @email, gpa = @gpa, password=@password, gender = @gender WHERE id = @id;";
             var parameters = new
             {
                 id = student.Id,
@@ -85,46 +83,31 @@ public class DatabaseHelper
                 email = student.email,
                 gpa = student.gpa,
                 password= student.password,
+                gender = student.gender
                
             };
 
-            // Thực hiện truy vấn UPDATE
             int rowsAffected = connection.Execute(query, parameters);
 
-            if (rowsAffected > 0)
-            {
-                // Trả về dữ liệu đã cập nhật dưới dạng JSON nếu có bản ghi được cập nhật
-                string json = JsonConvert.SerializeObject(student);
-                return json;
-            }
-            else
-            {
-                return "Không tìm thấy sinh viên có ID tương ứng.";
-            }
+            if (rowsAffected > 0) return JsonConvert.SerializeObject(student);
+            return "No student with corresponding ID was found.";
+            
         }
     }
-    public string GetStudent(int studentId)
+    public string GetStudent(string studentName)
     {
         using (MySqlConnection connection = new MySqlConnection(_connectionString))
         {
             connection.Open();
-            string query = "SELECT * FROM student WHERE id = @id;";
-            var parameters = new { id = studentId };
+            string queryFindByName = "SELECT * FROM student WHERE name LIKE @name;";
+            string queryFindAll = "SELECT * FROM student";
+            var parameters = string.IsNullOrEmpty(studentName) ? null : new { name = $"%{studentName}%" };
+            string query = string.IsNullOrEmpty(studentName) ? queryFindAll : queryFindByName;
 
-            // Thực hiện truy vấn SELECT để lấy thông tin sinh viên theo ID
-            Student student = connection.QueryFirstOrDefault<Student>(query, parameters);
+            List<Student> students = connection.Query<Student>(query, parameters).ToList();
 
-            if (student != null)
-            {
-                // Nếu tìm thấy sinh viên có ID tương ứng, trả về thông tin dưới dạng JSON
-                string json = JsonConvert.SerializeObject(student);
-                return json;
-            }
-            else
-            {
-                // Nếu không tìm thấy sinh viên, trả về một thông báo hoặc chuỗi JSON trống
-                return "Không tìm thấy sinh viên có ID tương ứng.";
-            }
+            if (students != null) return JsonConvert.SerializeObject(students);
+            return "No student with corresponding name was found";
         }
     }
     public string DeleteStudent(int studentId)
@@ -135,22 +118,56 @@ public class DatabaseHelper
             string query = "DELETE FROM student WHERE id = @id;";
             var parameters = new { id = studentId };
 
-            // Thực hiện truy vấn DELETE để xóa sinh viên theo ID
             int rowsAffected = connection.Execute(query, parameters);
 
-            if (rowsAffected > 0)
-            {
-                // Nếu có bản ghi bị xóa, trả về thông báo xóa thành công hoặc chuỗi JSON trống
-                return "Xóa sinh viên thành công.";
-            }
-            else
-            {
-                // Nếu không có bản ghi nào bị xóa, trả về thông báo rằng không tìm thấy sinh viên có ID tương ứng
-                return "Không tìm thấy sinh viên có ID tương ứng để xóa.";
-            }
+            if (rowsAffected > 0) return "Delete student success";
+            return "No student with corresponding ID was found to delete.";
         }
     }
+    public string GetGenderCounts()
+    {
+        using (MySqlConnection connection = new MySqlConnection(_connectionString))
+        {
+            connection.Open();
+            string query = "SELECT gender as name, COUNT(*) as value FROM student GROUP BY gender;";
 
+            List<GenderCount> genderCounts = connection.Query<GenderCount>(query).ToList();
+
+            if (genderCounts != null) return JsonConvert.SerializeObject(genderCounts);
+            return "No gender counts found";
+        }
+    }
+    public string GetStudentStatistics()
+    {
+        using (MySqlConnection connection = new MySqlConnection(_connectionString))
+        {
+            connection.Open();
+            string query = @"
+            SELECT
+               CASE
+                WHEN GPA >= 3.5 THEN 'Excellent'
+                WHEN GPA >= 3.0 AND GPA < 3.5 THEN 'Good'
+                WHEN GPA < 2.0 THEN 'Average'
+                WHEN GPA >= 2.0 AND GPA < 3.0 THEN 'Fair'
+            END AS grade,
+            COUNT(*) AS value
+               FROM
+                student
+                GROUP BY grade
+                ORDER BY CASE
+                       WHEN GPA >= 3.5 THEN 1
+                       WHEN GPA >= 3.0 AND GPA < 3.5 THEN 2
+                       WHEN GPA < 2.0 THEN 3
+                       WHEN GPA >= 2.0 AND GPA < 3.0 THEN 4
+                END;
+            ";
+
+            List<StudentStatistics> studentStatistics = connection.Query<StudentStatistics>(query).ToList();
+
+            if (studentStatistics != null) return JsonConvert.SerializeObject(studentStatistics);
+            return "No student statistics found";
+        }
+    }
 
 
 
